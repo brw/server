@@ -16,7 +16,8 @@ export const fetchRelays = pMemoize(async () => {
     .values()
     .map((e) => `https://${e.textContent}`)
     .filter((url) => url !== "https://demo.tiny.hose.cam")
-    .toArray();
+    .toArray()
+    .toSorted();
 
   return relays.concat(CUSTOM_RELAYS);
 });

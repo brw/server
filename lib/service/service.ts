@@ -5,7 +5,7 @@ import type { Input, Output } from "@pulumi/pulumi";
 import pulumi, { all, output } from "@pulumi/pulumi";
 import path from "path";
 import { defaultNetwork } from "./networks";
-import { convertLabels, convertEnvs } from "./util";
+import { convertLabels, convertEnvs } from "../util";
 import { convertPorts } from "./ports";
 import { getEnv } from "~lib/env";
 import { haringDockerProvider } from "./providers";

@@ -3,7 +3,7 @@ import { Image } from "@pulumi/docker-build";
 import { getEnv } from "~lib/env";
 import { confMount, dockerSocketRw, nvmeMount } from "~lib/service/mounts";
 import { ContainerService } from "~lib/service/service";
-import { getLatestCommit } from "~lib/service/util";
+import { getLatestCommit } from "~lib/util";
 
 const knotImage = new Image(
   "knot",

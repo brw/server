@@ -3,7 +3,7 @@ import dockerBuild from "@pulumi/docker-build";
 import { getEnv } from "~lib/env";
 import { interpolate } from "@pulumi/pulumi";
 import { confMount, dataMount } from "~lib/service/mounts";
-import { getLatestCommit } from "~lib/service/util";
+import { getLatestCommit } from "~lib/util";
 
 const postgresRelayService = new ContainerService("postgres-relay", {
   image: "postgres",
@@ -44,7 +44,6 @@ const relayImage = new dockerBuild.Image(
 export const relayService = new ContainerService("relay", {
   localImage: interpolate`${relayImage.ref}@${relayImage.digest}`,
   servicePort: 2470,
-  logDriver: "local",
   networkMode: "host",
   mounts: [dataMount("media/relay", "/data/relay/persist")],
   middlewares: ["relay"],

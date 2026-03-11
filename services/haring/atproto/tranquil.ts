@@ -4,7 +4,7 @@ import { _mount, confMount, mount } from "~lib/service/mounts";
 import { ContainerService, defaultConnection } from "~lib/service/service";
 import dockerBuild from "@pulumi/docker-build";
 import { remote } from "@pulumi/command";
-import { getLatestCommit } from "~lib/service/util";
+import { getLatestCommit } from "~lib/util";
 import { fetchRelays } from "~lib/relay-hosts";
 
 const tranquilImage = new dockerBuild.Image(

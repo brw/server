@@ -1,6 +1,7 @@
 import assert from "assert";
-import { ContainerServiceArgs } from "./service";
+import { ContainerServiceArgs } from "./service/service";
 import { output } from "@pulumi/pulumi";
+import ky from "ky";
 
 export function convertLabels(labels: Record<string, string | number | undefined>) {
   return Object.entries(labels).map(([label, value]) => {
@@ -20,14 +21,7 @@ export function convertEnvs(envs: ContainerServiceArgs["envs"]) {
 }
 
 export async function getLatestCommit(url: string) {
-  const res = await fetch(url);
-  if (!res.ok) {
-    throw Error(
-      `failed to get latest commit for ${url}: ${res.status} ${res.statusText} - ${await res.text()}`,
-    );
-  }
-
-  const html = await res.text();
+  const html = await ky.get(url, { retry: 5 }).text();
   const commit = html.match(/\/commit\/(\w+)/)?.[1];
   return commit;
 }
