@@ -101,20 +101,18 @@ class ContainerService extends pulumi.ComponentResource {
 
     const image =
       args.localImage ??
-      output(args.image).apply(async (image) =>
-        docker
-          .getRegistryImage({ name: image ?? `lscr.io/linuxserver/${name}` }, { parent: this })
-          .then((registryImage) => `${registryImage.name}@${registryImage.sha256Digest}`),
-      );
-
-    // image = new docker.RemoteImage(
-    //   `${name}`,
-    //   {
-    //     name: imageRef,
-    //     keepLocally: true,
-    //   },
-    //   { parent: this },
-    // ).repoDigest;
+      new docker.RemoteImage(
+        `${name}`,
+        {
+          name: output(args.image).apply(async (image) =>
+            docker
+              .getRegistryImage({ name: image ?? `lscr.io/linuxserver/${name}` }, { parent: this })
+              .then((registryImage) => `${registryImage.name}@${registryImage.sha256Digest}`),
+          ),
+          keepLocally: true,
+        },
+        { parent: this },
+      ).repoDigest;
 
     function createLabels(host: string, port: string, priority?: number) {
       const id = host.replaceAll(/[^\w]+/g, "-");
