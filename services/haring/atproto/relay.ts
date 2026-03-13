@@ -3,7 +3,8 @@ import dockerBuild from "@pulumi/docker-build";
 import { getEnv } from "~lib/env";
 import { interpolate } from "@pulumi/pulumi";
 import { confMount, dataMount } from "~lib/service/mounts";
-import { getLatestCommit } from "~lib/util";
+import { ensure, getLatestCommit } from "~lib/util";
+import { UNBOUND_ADDRESS, unboundService } from "../networking/unbound/unbound";
 
 const postgresRelayService = new ContainerService("postgres-relay", {
   image: "postgres",
@@ -42,29 +43,36 @@ const relayImage = new dockerBuild.Image(
   },
 );
 
-export const relayService = new ContainerService("relay", {
-  localImage: interpolate`${relayImage.ref}@${relayImage.digest}`,
-  servicePort: 2470,
-  networkMode: "host",
-  mounts: [dataMount("media/relay", "/data/relay/persist")],
-  middlewares: ["relay"],
-  envs: {
-    RELAY_ADMIN_PASSWORD: getEnv("RELAY_ADMIN_PASSWORD"),
-    DATABASE_URL: interpolate`postgres://postgres:${getEnv("POSTGRES_PASSWORD")}@${postgresRelayService.ip}/relay`,
-    RELAY_PERSIST_DIR: "/data/relay/persist",
-    RELAY_REPLAY_WINDOW: "24h",
-    RELAY_TRUSTED_DOMAINS: [
-      "*.host.bsky.network",
-      "atproto.brid.gy",
-      "blacksky.app",
-      "northsky.social",
-      "tngl.sh",
-      "pds.sprk.so",
-      "roomy.chat",
-      "selfhosted.social",
-      "eurosky.social",
-      "pds.witchcraft.systems",
-      "npmx.social",
-    ],
+export const relayService = new ContainerService(
+  "relay",
+  {
+    localImage: interpolate`${relayImage.ref}@${relayImage.digest}`,
+    servicePort: 2470,
+    networkMode: "host",
+    mounts: [dataMount("media/relay", "/data/relay/persist")],
+    middlewares: ["relay"],
+    dns: [UNBOUND_ADDRESS],
+    envs: {
+      RELAY_ADMIN_PASSWORD: getEnv("RELAY_ADMIN_PASSWORD"),
+      DATABASE_URL: interpolate`postgres://postgres:${getEnv("POSTGRES_PASSWORD")}@${postgresRelayService.ip}/relay`,
+      RELAY_PERSIST_DIR: "/data/relay/persist",
+      RELAY_REPLAY_WINDOW: "24h",
+      RELAY_TRUSTED_DOMAINS: [
+        "*.host.bsky.network",
+        "atproto.brid.gy",
+        "blacksky.app",
+        "northsky.social",
+        "tngl.sh",
+        "pds.sprk.so",
+        "roomy.chat",
+        "selfhosted.social",
+        "eurosky.social",
+        "pds.witchcraft.systems",
+        "npmx.social",
+      ],
+    },
   },
-});
+  {
+    dependsOn: unboundService.container,
+  },
+);

@@ -47,7 +47,7 @@ export class ServiceDef {}
 
 // TODO: turn ContainerService into a factory function like https://sst.dev/docs/examples/#api-gateway-auth
 class ContainerService extends pulumi.ComponentResource {
-  public readonly container: docker.Container | undefined;
+  public readonly container: Output<docker.Container> | undefined;
   public readonly localUrl: Output<string> | undefined;
   public readonly remoteUrl: string | undefined;
   public readonly ip: Output<string | undefined> | undefined;
@@ -194,43 +194,45 @@ class ContainerService extends pulumi.ComponentResource {
       capabilities.drops &&= capabilities.drops.map(ensureCapPrefix);
     }
 
-    this.container = new docker.Container(
-      name,
-      {
-        ...args,
-        image,
-        ...(opts?.deleteBeforeReplace !== false && { name: args.name ?? name }),
-        command: args.command,
-        restart: args.restart ?? "unless-stopped",
-        labels: allLabels.apply(convertLabels),
-        envs: convertEnvs(args.envs),
-        ports: convertPorts(args.ports),
-        mounts,
-        volumes: args.volumes,
-        logDriver: "local",
-        networkMode: args.networkMode ?? "bridge",
-        // TODO: healthchecks
-        // healthcheck: {tests}
-        networksAdvanced: args.networkMode
-          ? []
-          : pulumi
-              .output(args.networksAdvanced)
-              .apply((networksAdvanced) => [...networksAdvanced, { name: defaultNetwork.name }]),
-        hosts: args.networkMode
-          ? []
-          : pulumi
-              .output(args.hosts)
-              .apply((hosts) => [{ host: "host.docker.internal", ip: "host-gateway" }, ...hosts]),
-        capabilities,
-      },
-      {
-        parent: this,
-        deleteBeforeReplace: true,
-        replaceOnChanges: ["mounts", "volumes"],
-        ignoreChanges: opts?.ignoreChanges,
-        dependsOn: this.dependsOn,
-        ...opts,
-      },
+    this.container = output(
+      new docker.Container(
+        name,
+        {
+          ...args,
+          image,
+          ...(opts?.deleteBeforeReplace !== false && { name: args.name ?? name }),
+          command: args.command,
+          restart: args.restart ?? "unless-stopped",
+          labels: allLabels.apply(convertLabels),
+          envs: convertEnvs(args.envs),
+          ports: convertPorts(args.ports),
+          mounts,
+          volumes: args.volumes,
+          logDriver: "local",
+          networkMode: args.networkMode ?? "bridge",
+          // TODO: healthchecks
+          // healthcheck: {tests}
+          networksAdvanced: args.networkMode
+            ? []
+            : pulumi
+                .output(args.networksAdvanced)
+                .apply((networksAdvanced) => [...networksAdvanced, { name: defaultNetwork.name }]),
+          hosts: args.networkMode
+            ? []
+            : pulumi
+                .output(args.hosts)
+                .apply((hosts) => [{ host: "host.docker.internal", ip: "host-gateway" }, ...hosts]),
+          capabilities,
+        },
+        {
+          parent: this,
+          deleteBeforeReplace: true,
+          replaceOnChanges: ["mounts", "volumes"],
+          ignoreChanges: opts?.ignoreChanges,
+          dependsOn: this.dependsOn,
+          ...opts,
+        },
+      ),
     );
 
     this.ip = pulumi

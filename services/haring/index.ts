@@ -35,6 +35,7 @@ export * from "./monitoring/uptimekuma";
 export * from "./networking/tailscale";
 export * from "./networking/tinyproxy";
 export * from "./networking/wireguard";
+export * from "./networking/unbound/unbound";
 
 // export * from "./downloaders/jdownloader";
 export * from "./downloaders/qbittorrent";
@@ -54,7 +55,7 @@ export * from "./files/sftpgo";
 export * from "./files/stash";
 export * from "./files/synclounge";
 
-export * from "./atproto/tranquil";
+export * from "./atproto/tranquil/tranquil";
 export * from "./atproto/pegasus";
 export * from "./atproto/pds";
 export * from "./atproto/relay";

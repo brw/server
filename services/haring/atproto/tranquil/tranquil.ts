@@ -50,7 +50,7 @@ const postgresTranquilService = new ContainerService("postgres-tranquil", {
 let tranquilService: ContainerService | undefined;
 
 if (postgresTranquilService.container) {
-  const msmtprcFile = new asset.FileAsset(`${import.meta.dirname}/tranquil-files/msmtprc`);
+  const msmtprcFile = new asset.FileAsset(path.join(import.meta.dirname, "msmtprc"));
   const copyMsmtprc = new remote.CopyToRemote("tranquil-msmtprc", {
     connection: defaultConnection,
     source: msmtprcFile,
