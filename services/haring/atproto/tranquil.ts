@@ -101,26 +101,6 @@ if (postgresTranquilService.container) {
         "HostRegexp(`^.+\\.(t(ranquil)?|on)\\.bas\\.sh$`)",
       "traefik.http.routers.tranquil-user-redirect.middlewares":
         "cloudflare,tranquil-user-redirect",
-
-      "traefik.http.middlewares.tranquil-favicon.redirectregex.regex":
-        "^https://tranquil\\.bas\\.sh/favicon\\.ico$",
-      "traefik.http.middlewares.tranquil-favicon.redirectregex.replacement":
-        "https://tranquil.bas.sh/logo",
-      "traefik.http.routers.tranquil-favicon.entrypoints": "https",
-      "traefik.http.routers.tranquil-favicon.rule":
-        "Host(`tranquil.bas.sh`) && Path(`/favicon.ico`)",
-      "traefik.http.routers.tranquil-favicon.middlewares": "cloudflare,tranquil-favicon",
-
-      // "traefik.http.middlewares.tranquil-favicon-witchsky.redirectregex.regex":
-      //   "^https://tranquil\\.bas\\.sh/favicon\\.ico$",
-      // "traefik.http.middlewares.tranquil-favicon-witchsky.redirectregex.replacement":
-      //   "https://wsrv.nl/?url=https://tranquil.bas.sh/logo&w=564&h=564&fit=contain&bg=white&we",
-      // "traefik.http.routers.tranquil-favicon-witchsky.entrypoints": "https",
-      // "traefik.http.routers.tranquil-favicon-witchsky.rule":
-      //   "Host(`tranquil.bas.sh`) && Path(`/favicon.ico`)",
-      // "Host(`tranquil.bas.sh`) && Path(`/favicon.ico`) && HeaderRegexp(`Referer`, `\\bwitchsky\\b`)",
-      // "traefik.http.routers.tranquil-favicon-witchsky.middlewares":
-      //   "cloudflare,tranquil-favicon-witchsky",
     },
   });
 }
