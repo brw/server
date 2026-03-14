@@ -1,5 +1,6 @@
 import { remote } from "@pulumi/command";
-import { asset } from "@pulumi/pulumi";
+import { asset, ResourceHook } from "@pulumi/pulumi";
+import { exec } from "child_process";
 import path from "path";
 import { confMount } from "~lib/service/mounts";
 import { defaultNetwork } from "~lib/service/networks";
@@ -9,15 +10,37 @@ const unboundConfMount = confMount("unbound/custom.conf.d", "/etc/unbound/custom
 
 const valkeyUnboundService = new ContainerService("valkey-unbound", {
   image: "valkey/valkey",
-  command: ["--save 300 1"],
+  command: ["--save 300 1", "--loglevel warning"],
   volumes: [{ volumeName: "valkey-unbound", containerPath: "/data" }],
 });
 
-const unboundConfig = new remote.CopyToRemote("unbound-config", {
-  connection: defaultConnection,
-  source: new asset.FileAsset(path.join(import.meta.dirname, "cachedb.conf")),
-  remotePath: "/home/bas/docker/unbound/custom.conf.d/cachedb.conf",
+const afterConfigUpdateHook = new ResourceHook("after-unbound-config-update", () => {
+  console.log("reloading unbound config");
+  exec("docker exec unbound unbound-control reload", (error, stdout, stderr) => {
+    if (error) {
+      console.error(`failed to reload unbound config: ${error}`);
+      return;
+    }
+
+    console.log(stdout);
+    console.error(stderr);
+    console.log("unbound config reloaded");
+  });
 });
+
+const unboundConfig = new remote.CopyToRemote(
+  "unbound-config",
+  {
+    connection: defaultConnection,
+    source: new asset.FileAsset(path.join(import.meta.dirname, "cachedb.conf")),
+    remotePath: "/home/bas/docker/unbound/custom.conf.d/cachedb.conf",
+  },
+  {
+    hooks: {
+      afterUpdate: [afterConfigUpdateHook],
+    },
+  },
+);
 
 export const UNBOUND_ADDRESS = "172.18.1.1";
 
