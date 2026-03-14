@@ -1,8 +1,6 @@
 import { JSDOM } from "jsdom";
 import pMemoize from "p-memoize";
 
-const CUSTOM_RELAYS = ["https://relay.t4tlabs.net"];
-
 export const fetchRelays = pMemoize(async () => {
   const PULSAR = "https://pulsar.feeds.blue";
   const res = await fetch(PULSAR);
@@ -19,5 +17,5 @@ export const fetchRelays = pMemoize(async () => {
     .toArray()
     .toSorted();
 
-  return relays.concat(CUSTOM_RELAYS);
+  return relays;
 });
