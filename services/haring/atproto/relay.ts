@@ -4,7 +4,9 @@ import { getEnv } from "~lib/env";
 import { interpolate } from "@pulumi/pulumi";
 import { confMount, dataMount } from "~lib/service/mounts";
 import { ensure, getLatestCommit } from "~lib/util";
-import { UNBOUND_ADDRESS, unboundService } from "../networking/unbound/unbound";
+import { unboundService } from "../networking/unbound/unbound";
+import { STATIC_IPS } from "../ips";
+import { defaultNetwork } from "~lib/service/networks";
 
 const postgresRelayService = new ContainerService("postgres-relay", {
   image: "postgres",
@@ -13,6 +15,7 @@ const postgresRelayService = new ContainerService("postgres-relay", {
     POSTGRES_PASSWORD: getEnv("POSTGRES_PASSWORD"),
     POSTGRES_DB: "relay",
   },
+  networksAdvanced: [{ name: defaultNetwork.name, ipv4Address: STATIC_IPS.POSTGRES_RELAY }],
 });
 
 const relayImage = new dockerBuild.Image(
@@ -51,7 +54,7 @@ export const relayService = new ContainerService(
     networkMode: "host",
     mounts: [dataMount("media/relay", "/data/relay/persist")],
     middlewares: ["relay"],
-    dns: [UNBOUND_ADDRESS],
+    dns: [STATIC_IPS.UNBOUND],
     envs: {
       RELAY_ADMIN_PASSWORD: getEnv("RELAY_ADMIN_PASSWORD"),
       DATABASE_URL: interpolate`postgres://postgres:${getEnv("POSTGRES_PASSWORD")}@${postgresRelayService.ip}/relay`,

@@ -3,7 +3,7 @@ import { ContainerService } from "~lib/service/service";
 import { dockerSocket } from "~lib/service/mounts";
 import { getEnv } from "~lib/env";
 import { haringDockerProvider } from "~lib/service/providers";
-import { secretLabels } from "./traefik-secrets";
+import { SECRET_LABELS } from "./traefik-secrets";
 
 const traefikVolume = new Volume(
   "traefik",
@@ -116,7 +116,7 @@ export const traefikService = new ContainerService(
       "traefik.http.routers.metrics.entrypoints": "https",
       "traefik.http.routers.metrics.middlewares": "cloudflare,auth",
 
-      ...secretLabels,
+      ...SECRET_LABELS,
     },
   },
   {

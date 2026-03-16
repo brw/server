@@ -5,6 +5,7 @@ import path from "path";
 import { confMount } from "~lib/service/mounts";
 import { defaultNetwork } from "~lib/service/networks";
 import { ContainerService, defaultConnection } from "~lib/service/service";
+import { STATIC_IPS } from "../../ips";
 
 const unboundConfMount = confMount("unbound/custom.conf.d", "/etc/unbound/custom.conf.d");
 
@@ -42,14 +43,13 @@ const unboundConfig = new remote.CopyToRemote(
   },
 );
 
-export const UNBOUND_ADDRESS = "172.18.1.1";
-
 export const unboundService = new ContainerService(
   "unbound",
   {
     image: "klutchell/unbound",
     mounts: [unboundConfMount],
-    networksAdvanced: [{ name: defaultNetwork.name, ipv4Address: UNBOUND_ADDRESS }],
+    ulimits: [{ name: "nofile", soft: 65790, hard: 65790 }],
+    networksAdvanced: [{ name: defaultNetwork.name, ipv4Address: STATIC_IPS.UNBOUND }],
   },
   {
     dependsOn: valkeyUnboundService.container,

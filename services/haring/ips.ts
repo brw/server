@@ -1,0 +1,4 @@
+export const STATIC_IPS = {
+  UNBOUND: "172.18.1.1",
+  POSTGRES_RELAY: "172.18.1.2",
+} as const;
