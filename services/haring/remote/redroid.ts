@@ -2,7 +2,6 @@ import { confMount, ssdcacheMount } from "~lib/service/mounts";
 import { ContainerService } from "~lib/service/service";
 
 export const redroidService = new ContainerService("redroid", {
-  enabled: false, // seems to break my entire server's networking setup somehow?
   image: "redroid/redroid:12.0.0_64only-latest",
   privileged: true,
   ports: ["100.93.167.100:5555:5555"],

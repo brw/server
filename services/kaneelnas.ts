@@ -45,19 +45,3 @@ const kaneelnasQbittorrentService = new ContainerService(
     provider: kaneelnasDockerProvider,
   },
 );
-
-const kaneelnasWhoamiService = new ContainerService(
-  "whoami-kaneelnas",
-  {
-    enabled: false,
-    name: "whoami-bas",
-    image: "ghcr.io/traefik/whoami",
-    // servicePort: 80,
-    ports: ["8452:80"],
-    networkMode: "bridge",
-    commandConnection: kaneelnasConnection,
-  },
-  {
-    provider: kaneelnasDockerProvider,
-  },
-);

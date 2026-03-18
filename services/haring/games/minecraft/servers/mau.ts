@@ -2,10 +2,9 @@ import { nvmeMount, mount } from "~lib/service/mounts";
 import { ContainerService } from "~lib/service/service";
 import { getEnv } from "~lib/env";
 
-const minecraftMauService = new ContainerService(
+export const minecraftMauService = new ContainerService(
   "minecraft-mau",
   {
-    enabled: false,
     image: "itzg/minecraft-server",
     servicePort: 8804, // Plan
     subdomain: "mau",

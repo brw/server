@@ -12,11 +12,13 @@ export const sist2Service = new ContainerService("sist2", {
   middlewares: ["auth"],
 });
 
-if (sist2Service.container) {
-  const elasticsearchService = new ContainerService("elasticsearch", {
+export const elasticsearchService = new ContainerService(
+  "elasticsearch",
+  {
     image: "elasticsearch:7.17.28",
     ports: ["127.0.0.1:9200:9200", "127.0.0.1:9300:9300"],
     mounts: [confMount("elasticsearch", "/usr/share/elasticsearch/data")],
     envs: { "discovery.type": "single-node" },
-  });
-}
+  },
+  { dependsOn: [sist2Service.container] },
+);

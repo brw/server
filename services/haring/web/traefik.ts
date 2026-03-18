@@ -11,6 +11,7 @@ const traefikVolume = new Volume(
   {
     retainOnDelete: true,
     provider: haringDockerProvider,
+    replacementTrigger: true,
   },
 );
 

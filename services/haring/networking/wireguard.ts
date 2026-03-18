@@ -19,20 +19,19 @@ export const wireguardProtonService = new ContainerService("wireguard-proton", {
   cpuShares: 2048,
 });
 
-export const wireguardMullvadService = new ContainerService("wireguard-mullvad", {
-  enabled: false,
-  image: "lscr.io/linuxserver/wireguard",
-  // ports: [8888],
-  mounts: [confMount("wireguard-mullvad"), mount("/lib/modules")],
-  // envs: ["PEERS=2"],
-  // privileged: true,
-  capabilities: ["NET_ADMIN", "SYS_MODULE"],
-  sysctls: { "net.ipv4.conf.all.src_valid_mark": "1" },
-  healthcheck: {
-    tests: ["CMD", "/usr/bin/curl", "-sS", "icanhazip.com"],
-    interval: "20s",
-    retries: 3,
-    timeout: "10s",
-  },
-  cpuShares: 2048,
-});
+// export const wireguardMullvadService = new ContainerService("wireguard-mullvad", {
+//   image: "lscr.io/linuxserver/wireguard",
+//   // ports: [8888],
+//   mounts: [confMount("wireguard-mullvad"), mount("/lib/modules")],
+//   // envs: ["PEERS=2"],
+//   // privileged: true,
+//   capabilities: ["NET_ADMIN", "SYS_MODULE"],
+//   sysctls: { "net.ipv4.conf.all.src_valid_mark": "1" },
+//   healthcheck: {
+//     tests: ["CMD", "/usr/bin/curl", "-sS", "icanhazip.com"],
+//     interval: "20s",
+//     retries: 3,
+//     timeout: "10s",
+//   },
+//   cpuShares: 2048,
+// });

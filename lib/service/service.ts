@@ -1,15 +1,15 @@
 import command from "@pulumi/command";
 import type { input } from "@pulumi/command/types";
 import docker from "@pulumi/docker";
-import type { Input, Output } from "@pulumi/pulumi";
+import type { Input, Output, Resource } from "@pulumi/pulumi";
 import pulumi, { all, output } from "@pulumi/pulumi";
 import path from "path";
 import { defaultNetwork } from "./networks";
-import { convertLabels, convertEnvs } from "../util";
 import { convertPorts } from "./ports";
 import { getEnv } from "~lib/env";
 import { haringDockerProvider } from "./providers";
 import { MountOpts } from "./mounts";
+import { ContainerCapabilities, ContainerPort } from "@pulumi/docker/types/input";
 
 export const defaultConnection = {
   host: getEnv("CONNECTION_HOST"),
@@ -19,84 +19,52 @@ export const defaultConnection = {
 } satisfies input.remote.ConnectionArgs;
 
 type Env = string | number | boolean;
+type Port = (number | string | ContainerPort)[];
 
 export type ContainerServiceArgs = Partial<
   Omit<docker.ContainerArgs, "ports" | "labels" | "mounts" | "envs" | "capabilities"> & {
-    enabled: boolean;
     localImage: Input<string>;
-    disabled: boolean;
-    servicePort: number;
-    subdomain: string;
-    hostRule: string;
-    hostRulePriority: number;
-    ports: Input<Input<number | string | docker.types.input.ContainerPort>[]>;
-    middlewares: string[];
-    otherServicePorts: Record<string, number>;
-    labels: Input<Record<string, Input<string | number | undefined>> | undefined>;
-    mounts: MountOpts[];
+    servicePort: Input<number>;
+    subdomain: Input<string>;
+    hostRule: Input<string>;
+    hostRulePriority: Input<number>;
+    ports: Input<Port>;
+    middlewares: Input<Input<string>[]>;
+    otherServicePorts: Input<Record<string, Input<number>>>;
+    labels: Input<Record<string, Input<string | number>>>;
+    mounts: Input<Input<MountOpts>[]>;
     envs: Input<Record<string, Input<Env | Env[]>>>;
-    capabilities: string[] | { adds?: string[]; drops?: string[] };
-    internalHttps: boolean;
-    dontUpdateIf: () => boolean;
-    commandConnection: input.remote.ConnectionArgs;
-    monitor: boolean;
+    capabilities: Input<Input<string>[]> | ContainerCapabilities;
+    internalHttps: Input<boolean>;
+    commandConnection: Input<input.remote.ConnectionArgs>;
+    monitor: Input<boolean>;
   }
 >;
 
-export class ServiceDef {}
-
 // TODO: turn ContainerService into a factory function like https://sst.dev/docs/examples/#api-gateway-auth
 class ContainerService extends pulumi.ComponentResource {
-  public readonly container: Output<docker.Container> | undefined;
-  public readonly localUrl: Output<string> | undefined;
-  public readonly remoteUrl: string | undefined;
-  public readonly ip: Output<string | undefined> | undefined;
-  public readonly enabled: boolean;
-  private readonly commandConnection: input.remote.ConnectionArgs;
-  private readonly dependsOn: Input<pulumi.Resource>[] = [];
+  public readonly container: Output<docker.Container>;
+  public readonly localUrl: Output<string>;
+  public readonly ip: Output<string>;
+  public readonly mounts: docker.Container["mounts"];
+  public readonly envs: docker.Container["envs"];
+  public readonly capabilities: docker.Container["capabilities"];
+  public readonly ports: docker.Container["ports"];
 
-  constructor(name: string, _args: ContainerServiceArgs, opts?: pulumi.CustomResourceOptions) {
-    super("bas:docker:ContainerService", name, _args, opts);
+  private commandConnection: Input<input.remote.ConnectionArgs>;
 
-    const args = {
-      enabled: true,
-      disabled: false,
-      ports: [],
-      envs: {},
-      mounts: [],
-      middlewares: [],
-      labels: {},
-      otherServicePorts: {},
-      networksAdvanced: [],
-      hosts: [],
-      commandConnection: defaultConnection,
-      ..._args,
-    } satisfies ContainerServiceArgs;
+  constructor(name: string, args: ContainerServiceArgs, opts?: pulumi.CustomResourceOptions) {
+    super("bas:docker:ContainerService", name, args, opts);
 
-    this.commandConnection = args.commandConnection;
+    this.commandConnection = args.commandConnection ?? defaultConnection;
 
-    if (!args.enabled || args.disabled) {
-      this.enabled = false;
-      return;
-    }
-
-    if (opts?.dependsOn) {
-      this.dependsOn.push(...(Array.isArray(opts.dependsOn) ? opts.dependsOn : []));
-    }
-
-    const mounts = output(args.mounts).apply((mounts) => {
-      let i = 0;
-      for (const mount of mounts) {
-        if (mount.type === "bind" && mount.source) {
-          const dir = mount.kind === "file" ? path.dirname(mount.source) : mount.source;
-          this.dependsOn.push(this.createRemoteDir(dir, name, i));
-          i++;
-        }
-
-        delete mount.kind;
+    const dependsOn: Resource[] = [];
+    output(opts?.dependsOn ?? []).apply((optsDependsOn) => {
+      if (Array.isArray(optsDependsOn)) {
+        dependsOn.push(...optsDependsOn);
+      } else {
+        dependsOn.push(optsDependsOn);
       }
-
-      return mounts;
     });
 
     const image =
@@ -104,9 +72,9 @@ class ContainerService extends pulumi.ComponentResource {
       new docker.RemoteImage(
         `${name}`,
         {
-          name: output(args.image).apply(async (image) =>
+          name: output(args.image ?? `lscr.io/linuxserver/${name}`).apply(async (image) =>
             docker
-              .getRegistryImage({ name: image ?? `lscr.io/linuxserver/${name}` }, { parent: this })
+              .getRegistryImage({ name: image }, { parent: this })
               .then((registryImage) => `${registryImage.name}@${registryImage.sha256Digest}`),
           ),
           keepLocally: true,
@@ -114,85 +82,123 @@ class ContainerService extends pulumi.ComponentResource {
         { parent: this },
       ).repoDigest;
 
-    function createLabels(host: string, port: string, priority?: number) {
-      const id = host.replaceAll(/[^\w]+/g, "-");
+    const mounts = output(args.mounts ?? []).apply((mounts) => {
+      let n = 0;
+      for (const mount of mounts) {
+        if (mount.type === "bind" && mount.source) {
+          const dir = mount.kind === "file" ? path.dirname(mount.source) : mount.source;
+          dependsOn.push(this.createRemoteDir(dir, name, n));
+          n++;
+        }
 
-      return {
-        "traefik.enable": "true",
-        [`traefik.http.services.${id}.loadbalancer.server.port`]: port,
-        [`traefik.http.routers.${id}.service`]: id,
-        [`traefik.http.routers.${id}.rule`]:
-          host.includes("/") || host.includes("(") ? host : `Host(\`${host}\`)`,
-        [`traefik.http.routers.${id}.entrypoints`]: "https",
-        [`traefik.http.routers.${id}.middlewares`]: ["cloudflare", ...args.middlewares].join(","),
-        ...(priority && {
-          [`traefik.http.routers.${id}.priority`]: priority,
-        }),
-        ...(port === "443" && {
-          [`traefik.http.services.${id}.loadbalancer.server.scheme`]: "https",
-        }),
-        ...(args.monitor && {
-          [`kuma.${id}.http.name`]: name,
-          [`kuma.${id}.http.url`]: `http://${name}:${port}`,
-        }),
-      };
-    }
-
-    let labels: Record<string, string | number> = {};
-    if (args.servicePort) {
-      this.localUrl = all([args.networkMode, args.servicePort]).apply(
-        ([networkMode, servicePort]) =>
-          networkMode === "host" || networkMode?.startsWith("container:")
-            ? `http://host.docker.internal:${servicePort}`
-            : `http://${name}:${servicePort}`,
-      );
-      const host = args.hostRule ?? `${args.subdomain ?? name}.bas.sh`;
-      this.remoteUrl = `https://${host}`;
-
-      labels = {
-        ...labels,
-        ...createLabels(host, args.servicePort.toString(), args.hostRulePriority),
-      };
-    }
-
-    for (const service of Object.keys(args.otherServicePorts)) {
-      let host = service;
-      const port = args.otherServicePorts[service];
-
-      if (!host.includes(".bas.sh") && !host.includes("/")) {
-        host += ".bas.sh";
-      } else if (host.startsWith("/")) {
-        host = this.remoteUrl + host;
+        delete mount.kind;
       }
 
-      labels = {
-        ...labels,
-        ...createLabels(host, port.toString()),
+      return mounts;
+    });
+    this.mounts = mounts;
+
+    this.localUrl = all([args.networkMode, args.servicePort]).apply(([networkMode, servicePort]) =>
+      servicePort && (networkMode === "host" || networkMode?.startsWith("container:"))
+        ? `http://host.docker.internal:${servicePort}`
+        : `http://${name}:${servicePort}`,
+    );
+
+    const host = all([args.hostRule, args.subdomain]).apply(
+      ([hostRule, subdomain]) => hostRule ?? `${subdomain ?? name}.bas.sh`,
+    );
+
+    const createLabels = all([
+      args.middlewares ?? [],
+      args.hostRulePriority,
+      args.monitor,
+      this.localUrl,
+    ]).apply(([middlewares, hostRulePriority, monitor, localUrl]) => {
+      return (host: string, port: string | number) => {
+        const id = host.replaceAll(/[^\w]+/g, "-");
+
+        const labels = {
+          "traefik.enable": "true",
+          [`traefik.http.services.${id}.loadbalancer.server.port`]: port.toString(),
+          [`traefik.http.routers.${id}.service`]: `${id}`,
+          [`traefik.http.routers.${id}.entrypoints`]: "https",
+          [`traefik.http.routers.${id}.rule`]:
+            host.includes("/") || host.includes("(") ? host : `Host(\`${host}\`)`,
+          [`traefik.http.routers.${id}.middlewares`]: ["cloudflare", ...middlewares].join(","),
+        };
+
+        if (hostRulePriority) {
+          labels[`traefik.http.routers.${id}.priority`] = hostRulePriority.toString();
+        }
+
+        if (port.toString() === "443") {
+          labels[`traefik.http.services.${id}.loadbalancer.server.scheme`] = "https";
+        }
+
+        if (monitor) {
+          labels[`kuma.${id}.http.name`] = name;
+          labels[`kuma.${id}.http.url`] = localUrl;
+        }
+
+        return labels;
       };
-    }
+    });
 
-    const allLabels = output(args.labels).apply((inputLabels) => ({
-      ...labels,
-      ...inputLabels,
-    }));
+    const labels = all([
+      host,
+      args.labels ?? {},
+      args.servicePort,
+      args.otherServicePorts ?? {},
+      createLabels,
+    ]).apply(([host, labels, servicePort, otherServicePorts, createLabels]) => {
+      const additionalLabels = {};
 
-    args.envs = output(args.envs).apply((envs) => ({
-      PUID: `${getEnv("PUID")}`,
-      PGID: `${getEnv("PGID")}`,
-      TZ: `${getEnv("TZ")}`,
-      ...envs,
-    }));
+      for (const [service, port] of Object.entries(otherServicePorts)) {
+        let name = service;
+        if (!name.includes(".bas.sh") && !name.includes("/")) {
+          name += ".bas.sh";
+        } else if (name.startsWith("/")) {
+          name = name.slice(1);
+        }
 
-    const capabilities = Array.isArray(args.capabilities)
-      ? { adds: args.capabilities }
-      : args.capabilities;
+        Object.assign(additionalLabels, createLabels(name, port));
+      }
+
+      return Object.entries({
+        ...(servicePort ? createLabels(host, servicePort) : {}),
+        ...labels,
+        ...additionalLabels,
+      }).map(([label, value]) => ({ label, value: value.toString() }));
+    });
+
+    const envs = output(args.envs ?? {}).apply((envs) => [
+      ...Object.entries({
+        PUID: `${getEnv("PUID")}`,
+        PGID: `${getEnv("PGID")}`,
+        TZ: `${getEnv("TZ")}`,
+        ...envs,
+      }).map(([env, value]) => `${env}=${Array.isArray(value) ? value.join(",") : value}`),
+    ]);
+
+    this.envs = envs;
+
+    const ports = output(args.ports ?? []).apply(convertPorts);
+    this.ports = ports;
 
     const ensureCapPrefix = (cap: string) => (cap.startsWith("CAP_") ? cap : `CAP_${cap}`);
 
-    if (capabilities) {
-      capabilities.adds &&= capabilities.adds.map(ensureCapPrefix);
-      capabilities.drops &&= capabilities.drops.map(ensureCapPrefix);
-    }
+    const capabilities =
+      args.capabilities &&
+      output(args.capabilities).apply((caps) => {
+        if (Array.isArray(caps)) {
+          return { adds: caps.map(ensureCapPrefix) };
+        }
+
+        caps.adds &&= caps.adds.map(ensureCapPrefix);
+        caps.drops &&= caps.drops.map(ensureCapPrefix);
+        return caps;
+      });
+    this.capabilities = output(capabilities);
 
     this.container = output(
       new docker.Container(
@@ -203,9 +209,9 @@ class ContainerService extends pulumi.ComponentResource {
           ...(opts?.deleteBeforeReplace !== false && { name: args.name ?? name }),
           command: args.command,
           restart: args.restart ?? "unless-stopped",
-          labels: allLabels.apply(convertLabels),
-          envs: convertEnvs(args.envs),
-          ports: convertPorts(args.ports),
+          labels,
+          envs,
+          ports,
           mounts,
           volumes: args.volumes,
           logDriver: "local",
@@ -215,12 +221,12 @@ class ContainerService extends pulumi.ComponentResource {
           networksAdvanced: args.networkMode
             ? []
             : pulumi
-                .output(args.networksAdvanced)
+                .output(args.networksAdvanced ?? [])
                 .apply((networksAdvanced) => [...networksAdvanced, { name: defaultNetwork.name }]),
           hosts: args.networkMode
             ? []
             : pulumi
-                .output(args.hosts)
+                .output(args.hosts ?? [])
                 .apply((hosts) => [{ host: "host.docker.internal", ip: "host-gateway" }, ...hosts]),
           capabilities,
         },
@@ -229,20 +235,33 @@ class ContainerService extends pulumi.ComponentResource {
           deleteBeforeReplace: true,
           replaceOnChanges: ["mounts", "volumes"],
           ignoreChanges: opts?.ignoreChanges,
-          dependsOn: this.dependsOn,
+          dependsOn,
           ...opts,
         },
       ),
     );
 
     this.ip = pulumi
-      .all([this.container.networkDatas, defaultNetwork.name])
-      .apply(([networks, networkName]) => {
-        const net = networks?.find((n) => n.networkName === networkName);
-        return net?.ipAddress;
-      });
+      .all([args.networkMode, this.container.networkDatas, defaultNetwork.name])
+      .apply(([networkMode, networks, haringNetwork]) => {
+        if (networkMode === "host") {
+          return "host.docker.internal";
+        } else if (networkMode?.startsWith("container")) {
+          return ""; // TODO: container lookup
+        }
 
-    this.enabled = true;
+        const net = networks?.find(
+          (n) => n.networkName === haringNetwork || n.networkName === "bridge",
+        );
+
+        if (!net) {
+          throw Error(
+            `Could not find IP address on network ${haringNetwork} for container "${name}". Networks: ${JSON.stringify(networks)}`,
+          );
+        }
+
+        return net.ipAddress;
+      });
 
     this.registerOutputs();
   }
@@ -280,7 +299,7 @@ class ContainerService extends pulumi.ComponentResource {
       ...args,
       interpreter: [
         "/usr/bin/ssh",
-        `-p ${defaultConnection.port.toString()}`,
+        `-p ${defaultConnection.port}`,
         `${defaultConnection.user}@${defaultConnection.host}`,
       ],
     } satisfies command.local.RunArgs;

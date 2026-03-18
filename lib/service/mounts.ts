@@ -3,11 +3,11 @@ import { Input, output, Unwrap } from "@pulumi/pulumi";
 
 type Optional<T, K extends keyof T> = Pick<Partial<T>, K> & Omit<T, K>;
 
-export type MountOpts = docker.types.input.ContainerMount & CustomMountOpts;
+type CustomMountOpts = {
+  kind?: Input<"directory" | "file">;
+};
 
-type CustomMountOpts = Partial<{
-  kind: Input<"directory" | "file">;
-}>;
+export type MountOpts = docker.types.input.ContainerMount & CustomMountOpts;
 
 export function _mount({
   source,

@@ -2,10 +2,9 @@ import { nvmeMount } from "~lib/service/mounts";
 import { ContainerService } from "~lib/service/service";
 import { getEnv } from "~lib/env";
 
-const minecraftService = new ContainerService(
+export const minecraftService = new ContainerService(
   "minecraft",
   {
-    enabled: false,
     image: "itzg/minecraft-server:java21-jdk",
     servicePort: 8804,
     subdomain: "mc",

@@ -2,10 +2,9 @@ import { nvmeMount, mount } from "~lib/service/mounts";
 import { ContainerService } from "~lib/service/service";
 import { getEnv } from "~lib/env";
 
-const minecraftMeow = new ContainerService(
+export const minecraftMeow = new ContainerService(
   "minecraft-meow",
   {
-    enabled: false,
     image: "itzg/minecraft-server:java24-graalvm",
     // servicePort: 8804, // Plan
     // subdomain: "meowmeowmeow",

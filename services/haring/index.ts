@@ -76,7 +76,7 @@ export * from "./games/minecraft/rcon";
 export * from "./remote/czkawka";
 export * from "./remote/mkvtoolnix";
 export * from "./remote/mkv-muxing-batch";
-// export * from "./remote/redroid";
+// export * from "./remote/redroid"; // TODO: seems to break my entire server's networking setup somehow?
 export * from "./remote/sealskin";
 
 export * from "./other/anki";

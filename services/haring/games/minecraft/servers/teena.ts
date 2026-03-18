@@ -5,7 +5,6 @@ import { getEnv } from "~lib/env";
 const minecraftTeenaService = new ContainerService(
   "minecraft-teena",
   {
-    enabled: false,
     // image: "itzg/minecraft-server:java24-graalvm",
     image: "itzg/minecraft-server",
     // servicePort: 8804,

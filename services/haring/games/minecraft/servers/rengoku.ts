@@ -3,45 +3,43 @@ import { ContainerService } from "~lib/service/service";
 import { getEnv } from "~lib/env";
 import { mcHasOnlinePlayers } from "../util";
 
-const velocityRengokuService = new ContainerService("velocity-rengoku", {
-  enabled: false,
-  image: "itzg/mc-proxy:java25",
-  servicePort: 8804, // Plan
-  ports: [
-    {
-      internal: 25565,
-      external: 25562,
-    },
-  ],
-  mounts: [nvmeMount("velocity-rengoku", "/config")],
-  envs: {
-    TYPE: "VELOCITY",
-    EULA: true,
-    VELOCITY_VERSION: "3.4",
-    MINECRAFT_VERSION: "1.21.11",
-    MEMORY: "2G",
-    ICON: "https://i.bas.sh/rengoku.jpg",
-    OVERRIDE_ICON: true,
-    JVM_XX_OPTS:
-      "-XX:+UseZGC -XX:+UseCompactObjectHeaders -XX:+UseTransparentHugePages -XX:+EnableDynamicAgentLoading",
-    ENABLE_RCON: true,
-    RCON_PASSWORD: getEnv("RCON_PASSWORD"),
+// export const velocityRengokuService = new ContainerService("velocity-rengoku", {
+//   image: "itzg/mc-proxy:java25",
+//   servicePort: 8804, // Plan
+//   ports: [
+//     {
+//       internal: 25565,
+//       external: 25562,
+//     },
+//   ],
+//   mounts: [nvmeMount("velocity-rengoku", "/config")],
+//   envs: {
+//     TYPE: "VELOCITY",
+//     EULA: true,
+//     VELOCITY_VERSION: "3.4",
+//     MINECRAFT_VERSION: "1.21.11",
+//     MEMORY: "2G",
+//     ICON: "https://i.bas.sh/rengoku.jpg",
+//     OVERRIDE_ICON: true,
+//     JVM_XX_OPTS:
+//       "-XX:+UseZGC -XX:+UseCompactObjectHeaders -XX:+UseTransparentHugePages -XX:+EnableDynamicAgentLoading",
+//     ENABLE_RCON: true,
+//     RCON_PASSWORD: getEnv("RCON_PASSWORD"),
+//
+//     // plugins
+//     MODRINTH_DOWNLOAD_DEPENDENCIES: "required",
+//     MODRINTH_PROJECTS: ["onetimepack", "plan", "antipopup"],
+//   },
+// });
 
-    // plugins
-    MODRINTH_DOWNLOAD_DEPENDENCIES: "required",
-    MODRINTH_PROJECTS: ["onetimepack", "plan", "antipopup"],
-  },
-});
-
-const limboRengokuService = new ContainerService("limbo-rengoku", {
-  enabled: false,
-  image: "itzg/minecraft-server:java25-graalvm",
-  envs: {
-    TYPE: "LIMBO",
-    EULA: true,
-    LIMBO_BUILD: "66",
-  },
-});
+// export const limboRengokuService = new ContainerService("limbo-rengoku", {
+//   image: "itzg/minecraft-server:java25-graalvm",
+//   envs: {
+//     TYPE: "LIMBO",
+//     EULA: true,
+//     LIMBO_BUILD: "66",
+//   },
+// });
 
 export const minecraftRengokuService = new ContainerService(
   "minecraft-rengoku",

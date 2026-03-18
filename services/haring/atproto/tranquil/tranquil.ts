@@ -7,6 +7,7 @@ import { remote } from "@pulumi/command";
 import { getLatestCommit } from "~lib/util";
 import { fetchRelays } from "~lib/relay-hosts";
 import path from "path";
+import { DnsRecord } from "@pulumi/cloudflare";
 
 const tranquilImage = new dockerBuild.Image(
   "tranquil-pds",
@@ -50,17 +51,36 @@ const postgresTranquilService = new ContainerService("postgres-tranquil", {
   },
 });
 
-let tranquilService: ContainerService | undefined;
+const msmtprcFile = new asset.FileAsset(path.join(import.meta.dirname, "msmtprc"));
+const copyMsmtprc = new remote.CopyToRemote("tranquil-msmtprc", {
+  connection: defaultConnection,
+  source: msmtprcFile,
+  remotePath: "/home/bas/docker/tranquil/msmtprc",
+});
 
-if (postgresTranquilService.container) {
-  const msmtprcFile = new asset.FileAsset(path.join(import.meta.dirname, "msmtprc"));
-  const copyMsmtprc = new remote.CopyToRemote("tranquil-msmtprc", {
-    connection: defaultConnection,
-    source: msmtprcFile,
-    remotePath: "/home/bas/docker/tranquil/msmtprc",
-  });
+const PDS_USER_HANDLE_DOMAINS = ["tranquil.bas.sh", "t.bas.sh", "on.bas.sh"];
+export const tranquilDnsRecords = PDS_USER_HANDLE_DOMAINS.flatMap((host) => [
+  new DnsRecord(`tranquil-${host}`, {
+    zoneId: getEnv("CLOUDFLARE_ZONE_ID"),
+    name: host,
+    ttl: 1,
+    type: "CNAME",
+    content: "haring.bas.sh",
+    proxied: false,
+  }),
+  new DnsRecord(`tranquil-wildcard-${host}`, {
+    zoneId: getEnv("CLOUDFLARE_ZONE_ID"),
+    name: `*.${host}`,
+    ttl: 1,
+    type: "CNAME",
+    content: "tranquil.bas.sh",
+    proxied: false,
+  }),
+]);
 
-  tranquilService = new ContainerService("tranquil", {
+export const tranquilService = new ContainerService(
+  "tranquil",
+  {
     localImage: tranquilImage.digest,
     servicePort: 3000,
     hostRule: "HostRegexp(`^(.+?\\.)?(t(ranquil)|on)\\.bas\\.sh`)",
@@ -82,7 +102,7 @@ if (postgresTranquilService.container) {
       DISCORD_BOT_TOKEN: getEnv("TRANQUIL_DISCORD_BOT_TOKEN"),
       INVITE_CODE_REQUIRED: true,
       ACCEPTING_REPO_IMPORTS: true,
-      PDS_USER_HANDLE_DOMAINS: ["tranquil.bas.sh", "t.bas.sh", "on.bas.sh"],
+      PDS_USER_HANDLE_DOMAINS,
       CONTACT_EMAIL: getEnv("EMAIL"),
       PDS_AGE_ASSURANCE_OVERRIDE: true,
       CRAWLERS: fetchRelays(),
@@ -106,7 +126,6 @@ if (postgresTranquilService.container) {
       "traefik.http.routers.tranquil-user-redirect.middlewares":
         "cloudflare,tranquil-user-redirect",
     },
-  });
-}
-
-export { tranquilService };
+  },
+  { dependsOn: [...tranquilDnsRecords, copyMsmtprc] },
+);

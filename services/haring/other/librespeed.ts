@@ -2,7 +2,6 @@ import { getEnv } from "~lib/env";
 import { ContainerService } from "~lib/service/service";
 
 export const librespeedService = new ContainerService("librespeed", {
-  enabled: true,
   image: "ghcr.io/librespeed/speedtest",
   servicePort: 8080,
   subdomain: "speedtest",

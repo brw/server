@@ -52,6 +52,6 @@ export const unboundService = new ContainerService(
     networksAdvanced: [{ name: defaultNetwork.name, ipv4Address: STATIC_IPS.UNBOUND }],
   },
   {
-    dependsOn: valkeyUnboundService.container,
+    dependsOn: [valkeyUnboundService.container],
   },
 );

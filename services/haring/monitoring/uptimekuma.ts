@@ -10,13 +10,12 @@ export const uptimekumaService = new ContainerService("uptimekuma", {
   middlewares: ["auth"],
 });
 
-export const autokumaService = new ContainerService("autokuma", {
-  enabled: false,
-  image: "ghcr.io/bigboot/autokuma",
-  mounts: [confMount("autokuma", "/data"), dockerSocket],
-  envs: {
-    AUTOKUMA__KUMA__URL: "http://uptimekuma:3001",
-    AUTOKUMA__KUMA__USERNAME: getEnv("AUTOKUMA_USERNAME"),
-    AUTOKUMA__KUMA__PASSWORD: getEnv("AUTOKUMA_PASSWORD"),
-  },
-});
+// export const autokumaService = new ContainerService("autokuma", {
+//   image: "ghcr.io/bigboot/autokuma",
+//   mounts: [confMount("autokuma", "/data"), dockerSocket],
+//   envs: {
+//     AUTOKUMA__KUMA__URL: "http://uptimekuma:3001",
+//     AUTOKUMA__KUMA__USERNAME: getEnv("AUTOKUMA_USERNAME"),
+//     AUTOKUMA__KUMA__PASSWORD: getEnv("AUTOKUMA_PASSWORD"),
+//   },
+// });
