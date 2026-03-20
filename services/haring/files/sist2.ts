@@ -20,5 +20,5 @@ export const elasticsearchService = new ContainerService(
     mounts: [confMount("elasticsearch", "/usr/share/elasticsearch/data")],
     envs: { "discovery.type": "single-node" },
   },
-  { dependsOn: [sist2Service.container] },
+  { dependsOn: sist2Service.container },
 );
