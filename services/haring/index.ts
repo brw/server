@@ -60,7 +60,8 @@ export * from "./atproto/pegasus";
 export * from "./atproto/pds";
 export * from "./atproto/relay";
 // export * from "./atproto/social-app";
-export * from "./atproto/tangled";
+export * from "./atproto/knot";
+export * from "./atproto/spindle";
 
 export * from "./communication/ergo";
 export * from "./communication/thelounge";
