@@ -1,8 +1,10 @@
 import { DnsRecord } from "@pulumi/cloudflare";
+import { remote } from "@pulumi/command";
 import { Image } from "@pulumi/docker-build";
+import { asset } from "@pulumi/pulumi";
 import { getEnv } from "~lib/env";
-import { confMount, nvmeMount } from "~lib/service/mounts";
-import { ContainerService } from "~lib/service/service";
+import { confMount, mount, nvmeMount } from "~lib/service/mounts";
+import { ContainerService, defaultConnection } from "~lib/service/service";
 import { getLatestCommit } from "~lib/util";
 
 const knotImage = new Image(
@@ -32,11 +34,21 @@ const knotImage = new Image(
   },
 );
 
+export const knotMotd = new remote.CopyToRemote("knot-motd", {
+  connection: defaultConnection,
+  source: new asset.StringAsset("／人◕ ‿‿ ◕人＼ 📝\n"),
+  remotePath: "/home/bas/docker/knot/motd",
+});
+
 export const knotService = new ContainerService("knot", {
   localImage: knotImage.digest,
   servicePort: 5555,
   ports: [22],
-  mounts: [confMount("knot", "/app"), nvmeMount("knot", "/home/git/repositories")],
+  mounts: [
+    confMount("knot", "/app"),
+    mount(knotMotd.remotePath, "/home/git/motd", { kind: "file" }),
+    nvmeMount("knot", "/home/git/repositories"),
+  ],
   volumes: [{ volumeName: "knot-keys", containerPath: "/etc/ssh/keys" }],
   envs: {
     KNOT_SERVER_HOSTNAME: "knot.bas.sh",

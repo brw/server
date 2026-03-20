@@ -29,7 +29,7 @@ const afterConfigUpdateHook = new ResourceHook("after-unbound-config-update", ()
   });
 });
 
-const unboundConfig = new remote.CopyToRemote(
+export const unboundConfig = new remote.CopyToRemote(
   "unbound-config",
   {
     connection: defaultConnection,
