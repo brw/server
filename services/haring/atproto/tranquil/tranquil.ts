@@ -99,6 +99,7 @@ export const tranquilService = new ContainerService(
       MASTER_KEY: getEnv("TRANQUIL_MASTER_KEY"),
       MAIL_FROM_ADDRESS: "tranquil@bas.sh",
       MAIL_FROM_NAME: "Tranquil PDS",
+      SMTP_PASSWORD: getEnv("SMTP_PASSWORD"),
       DISCORD_BOT_TOKEN: getEnv("TRANQUIL_DISCORD_BOT_TOKEN"),
       INVITE_CODE_REQUIRED: true,
       ACCEPTING_REPO_IMPORTS: true,

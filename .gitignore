@@ -3,5 +3,4 @@ node_modules/
 !.old/jsonnet/
 .env
 *.trace
-msmtprc
 traefik-secrets.ts
